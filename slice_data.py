@@ -1,75 +1,72 @@
-import os
 import xarray as xr
+import warnings
+import os
+from glob import glob
+import netCDF4
+from datetime import datetime
 
-def verifier_fichiers_nc(dossier):
-    fichiers_incorrects = []
-    for fichier in os.listdir(dossier):
-        if fichier.endswith('.nc'):
-            chemin_fichier = os.path.join(dossier, fichier)
-            resultat = verifier_fichier(chemin_fichier)
-            if resultat is not None:
-                fichiers_incorrects.append(resultat)
+# Suppress specific numpy warning
+warnings.filterwarnings("ignore", message="Signature .* for <class 'numpy.longdouble'> does not match any known type")
+
+def process_files(year=None, data_type=None):
+    input_folder = 'DATA_ERA5/'
+    output_folder = 'DATA_ERA5/TISR_Corrige/'
+
+    # Generate file pattern based on year and data type
+    if year and data_type:
+        file_pattern = f"{input_folder}{year}_{data_type}.nc"
+    elif year:
+        file_pattern = f"{input_folder}{year}_*.nc"
+    elif data_type:
+        file_pattern = f"{input_folder}*_{data_type}.nc"
+    else:
+        file_pattern = f"{input_folder}*.nc"
     
-    if fichiers_incorrects:
-        print("\nFichiers avec des dates incorrectes :")
-        for fichier, debut, fin in fichiers_incorrects:
-            print(f"  {fichier} : Début trouvé = {debut}, Fin trouvée = {fin}")
-        tronquer_fichiers(dossier, fichiers_incorrects)
-        # verifier que les fichiers crée soit 
+    # Get list of files matching the pattern
+    files = glob(file_pattern)
 
-def verifier_fichier(chemin_fichier):
-    try:
-        nom_fichier = os.path.basename(chemin_fichier)
-        annee = int(nom_fichier.split('_')[0])
-        
-        ds = xr.open_dataset(chemin_fichier)
-        dates = ds.time.values
-        premiere_date = str(dates[0])
-        derniere_date = str(dates[-1])
-        
-        # Vérification de la première date
-        date_debut_attendue = f'{annee}-01-01T00:00:00.000000000'
-        debut_correct = premiere_date == date_debut_attendue
-        
-        # Vérification de la dernière date
-        date_fin_attendue = f'{annee}-12-31T23:00:00.000000000'
-        fin_correcte = derniere_date == date_fin_attendue
-        
-        # Vérification de l'année
-        annee_correcte = annee == int(premiere_date[:4]) and annee == int(derniere_date[:4])
-        
-        if not (debut_correct and fin_correcte and annee_correcte):
-            return (nom_fichier, premiere_date, derniere_date)
-    except Exception as e:
-        print(f"Erreur lors de la vérification du fichier {chemin_fichier} : {e}")
-    return None
+    for file in files:
+        try:
+            nc_fichier = netCDF4.Dataset(file, 'r')
+            nom_fichier = os.path.basename(file)
+            file_year = nom_fichier.split('_')[0].split('/')[-1]
 
-def tronquer_fichiers(dossier, fichiers_incorrects):
-    for fichier, debut, fin in fichiers_incorrects:
-        chemin_fichier = os.path.join(dossier, fichier)
-        tronquer_fichier(chemin_fichier, debut[:4])
+            for nom_var, var in nc_fichier.variables.items():
+                    if nom_var == 'time':
+                        time_units = var.units
+                        dates = netCDF4.num2date(var[:], time_units)
+                        premiere_date = dates[0]
+                        derniere_date = dates[-1]
 
-def tronquer_fichier(chemin_fichier, annee):
-    try:
-        nom_fichier = os.path.basename(chemin_fichier)
-        annee = int(nom_fichier.split('_')[0])
-        print('nom')
-        ds = xr.open_dataset(chemin_fichier)
-        debut_annee = f'{annee}-01-01T00:00:00.000000000'
-        fin_annee = f'{annee}-12-31T23:00:00.000000000'
-        
-        ds_tronquee = ds.sel(time=slice(debut_annee, fin_annee))
-        
-        nom_fichier = os.path.basename(chemin_fichier)
-        nouveau_nom = f"corrige_{nom_fichier}"
-        chemin_nouveau_fichier = os.path.join(os.path.dirname(chemin_fichier), nouveau_nom)
-        
-        ds_tronquee.to_netcdf(chemin_nouveau_fichier)
-        
-        print(f"Fichier corrigé créé : {chemin_nouveau_fichier}")
-        
-    except Exception as e:
-        print(f"Erreur lors de la création du fichier corrigé pour {chemin_fichier} : {e}")
+                        # Vérification de la première date
+                        date_debut_attendue = datetime(year, 1, 1, 0, 0)
+                        debut_correct = premiere_date == date_debut_attendue
+                        
+                        # Vérification de la dernière date
+                        date_fin_attendue = datetime(year, 12, 31, 23, 0)
+                        fin_correcte = derniere_date == date_fin_attendue
+            # Verify the original file date range
+            if not (debut_correct and fin_correcte): 
+                print(file)
+                with xr.open_dataset(file) as data:
 
-dossier = 'DATA_ERA5'
-verifier_fichiers_nc(dossier)
+                    output_file = f"{output_folder}{file_year}_{data_type}" 
+                    
+                    # Create a new file without the first 24 hours
+                    data_cut = data.sel(time=slice(f'{file_year}-01-01T00:00:00.000000000', f'{file_year}-12-31T23:00:00.000000000'))
+                    
+                    # Save the sliced data
+                    data_cut.to_netcdf(output_file+'.nc')
+
+                    # Verify the new file date range
+                    with xr.open_dataset(output_file) as data_cut:
+                        print(f"Processed {file}: New file date range: {data_cut['time'].min().values} to {data_cut['time'].max().values}")
+
+        except Exception as e:
+            print(f"An error occurred processing {file}: {e}")
+
+
+process_files(data_type='tisr') 
+# process_files(year='2021')  # Specify only the year
+# process_files(data_type='atmos')  # Specify only the type
+# process_files()  # Process all files
