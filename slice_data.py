@@ -27,11 +27,13 @@ def process_files(year=None, data_type=None):
 
     for file in files:
         try:
-            nc_fichier = netCDF4.Dataset(file, 'r')
-            nom_fichier = os.path.basename(file)
-            file_year = nom_fichier.split('_')[0].split('/')[-1]
+            with netCDF4.Dataset(file, 'r') as nc_fichier:
+                nom_fichier = os.path.basename(file)
+                file_year = nom_fichier.split('_')[0]
 
-            for nom_var, var in nc_fichier.variables.items():
+                debut_correct = fin_correcte = False
+
+                for nom_var, var in nc_fichier.variables.items():
                     if nom_var == 'time':
                         time_units = var.units
                         dates = netCDF4.num2date(var[:], time_units)
@@ -39,32 +41,31 @@ def process_files(year=None, data_type=None):
                         derniere_date = dates[-1]
 
                         # Vérification de la première date
-                        date_debut_attendue = datetime(year, 1, 1, 0, 0)
+                        date_debut_attendue = datetime(int(file_year), 1, 1, 0, 0)
                         debut_correct = premiere_date == date_debut_attendue
                         
                         # Vérification de la dernière date
-                        date_fin_attendue = datetime(year, 12, 31, 23, 0)
+                        date_fin_attendue = datetime(int(file_year), 12, 31, 23, 0)
                         fin_correcte = derniere_date == date_fin_attendue
-            # Verify the original file date range
-            if not (debut_correct and fin_correcte): 
-                print(file)
-                with xr.open_dataset(file) as data:
 
-                    output_file = f"{output_folder}{file_year}_{data_type}" 
-                    
-                    # Create a new file without the first 24 hours
-                    data_cut = data.sel(time=slice(f'{file_year}-01-01T00:00:00.000000000', f'{file_year}-12-31T23:00:00.000000000'))
-                    
-                    # Save the sliced data
-                    data_cut.to_netcdf(output_file+'.nc')
+                # Verify the original file date range
+                if not (debut_correct and fin_correcte): 
+                    print(file)
+                    with xr.open_dataset(file) as data:
+                        output_file = f"{output_folder}{file_year}_{data_type}.nc"
+                        
+                        # Create a new file without the first 24 hours
+                        data_cut = data.sel(time=slice(f'{file_year}-01-01T00:00:00', f'{file_year}-12-31T23:00:00'))
+                        
+                        # Save the sliced data
+                        data_cut.to_netcdf(output_file)
 
-                    # Verify the new file date range
-                    with xr.open_dataset(output_file) as data_cut:
-                        print(f"Processed {file}: New file date range: {data_cut['time'].min().values} to {data_cut['time'].max().values}")
+                        # Verify the new file date range
+                        with xr.open_dataset(output_file) as data_cut_check:
+                            print(f"Processed {file}: New file date range: {data_cut_check['time'].min().values} to {data_cut_check['time'].max().values}")
 
         except Exception as e:
             print(f"An error occurred processing {file}: {e}")
-
 
 process_files(data_type='tisr') 
 # process_files(year='2021')  # Specify only the year
