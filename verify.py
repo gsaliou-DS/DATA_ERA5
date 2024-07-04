@@ -1,4 +1,4 @@
-import os
+import os 
 
 # Répertoire contenant les fichiers .nc
 directory = '/Volumes/IMT-SC-015/DATA_ERA5'
