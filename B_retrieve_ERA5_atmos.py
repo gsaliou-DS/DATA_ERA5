@@ -39,11 +39,10 @@ def retrieve_yearly_data(start_date, end_date, year):
     return pressure_level_params, filename
 
 if __name__ == "__main__":
-    #start_year = 2016
-    #end_year = 2022  
-    #years = range(start_year, end_year + 1)
+    start_year = 2016
+    end_year = 2022  
+    years = range(start_year, end_year + 1)
 
-    years = (2015,2016,2017,2022)
 
     try:
         with concurrent.futures.ThreadPoolExecutor() as executor:
