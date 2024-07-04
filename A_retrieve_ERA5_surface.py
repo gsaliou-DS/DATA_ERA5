@@ -38,10 +38,10 @@ def retrieve_yearly_data(start_date, end_date, year):
     return surface_level_params, filename
 
 if __name__ == "__main__":
-    #start_year = 1979
-    #end_year = 2005  # Adjust this to the range of years you want to retrieve
-    #years = range(start_year, end_year + 1)
-    years = (2009,2012,2018)
+    start_year = 1979
+    end_year = 2005  # Adjust this to the range of years you want to retrieve
+    years = range(start_year, end_year + 1)
+    #years = (2009,2012,2018)
 
     try:
         with concurrent.futures.ThreadPoolExecutor() as executor:
