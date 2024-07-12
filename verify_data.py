@@ -4,7 +4,7 @@ from netCDF4 import Dataset
 
 def verify_output(output_file):
     """
-    Verify the contents of the output NetCDF file.
+    Verify the contents of the output of reshape_data.py NetCDF file.
     """
     if not os.path.exists(output_file):
         print(f"Output file not found: {output_file}")
