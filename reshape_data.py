@@ -152,3 +152,4 @@ if __name__ == "__main__":
         output_file = os.path.join(output_dir, f'{year}_local.nc')
         processor = NetCDFProcessor(year, data_dir)
         processor.process(output_file)
+        print(f"Processed data for {year} and saved to {output_file}")
