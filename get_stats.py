@@ -13,10 +13,10 @@ end_year = 2022
 years = list(range(start_year, end_year + 1))
 
 # Initialisation des tableaux pour les moyennes et écarts-types globaux
-variables = ['tcwv', 'msl', 'sp', 't2m', 'skt', 'z', 't', 'q', 'u', 'v', 'tisr']
+variables = ['tcwv', 'msl', 'sp', 't2m', 'skt', 'z1', 'z2', 'z3', 'z4', 'z5', 'z6', 'z7', 'z8', 'z9', 'z10', 'z11', 'z12', 't1', 't2', 't3', 't4', 't5', 't6', 't7', 't8', 't9', 't10', 't11', 't12', 'q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'q7', 'q8', 'q9', 'q10', 'q11', 'q12', 'u1', 'u2', 'u3', 'u4', 'u5', 'u6', 'u7', 'u8', 'u9', 'u10', 'u11', 'u12', 'v1', 'v2', 'v3', 'v4', 'v5', 'v6', 'v7', 'v8', 'v9', 'v10', 'v11', 'v12', 'tisr']
 global_means = {var: np.zeros((1, 1, 1)) for var in variables}
 global_stds = {var: np.zeros((1, 1, 1)) for var in variables}
-time_means = {var: np.zeros((1, 721, 1440)) for var in variables}
+time_means = {var: np.zeros((1, 81, 121)) for var in variables}
 
 # Fonction pour charger les données d'un fichier NetCDF
 def load_data(file_path, var):
@@ -41,9 +41,10 @@ for year in years:
 
         rnd_idx = np.random.randint(0, data.shape[0] - 500)  # Sélectionne un indice aléatoire
         data_subset = data[rnd_idx:rnd_idx+500]  # Sous-ensemble de 500 éléments
+        print(f"Processing {file_path} for variable {var} with shape {data_subset.shape}")
 
-        global_means[var] += np.mean(data_subset, keepdims=True, axis=(0, 2, 3))
-        global_stds[var] += np.var(data_subset, keepdims=True, axis=(0, 2, 3))
+        global_means[var] += np.mean(data_subset, keepdims=True, axis=(0, 1, 2))
+        global_stds[var] += np.var(data_subset, keepdims=True, axis=(0, 1, 2))
         time_means[var] += np.mean(data_subset, axis=0, keepdims=True)  # Ajout pour les moyennes temporelles
 
 # Calcul des moyennes et écarts-types globaux
